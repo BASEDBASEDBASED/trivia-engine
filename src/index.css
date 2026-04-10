@@ -57,7 +57,7 @@ body {
   }
 }
 
-/* ── CARD ── */
+/* CARD */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -65,7 +65,7 @@ body {
   padding: 36px;
 }
 
-/* ── LOGO ── */
+/* LOGO */
 .logo-row {
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@ body {
   font-family: var(--font-head);
 }
 
-/* ── FORM CONTROLS ── */
+/* FORM CONTROLS */
 .field-label {
   display: block;
   font-family: var(--font-head);
@@ -149,7 +149,7 @@ body {
   border-color: var(--accent);
 }
 
-/* ── BUTTONS ── */
+/* BUTTONS */
 .btn-primary {
   width: 100%;
   padding: 16px;
@@ -201,7 +201,7 @@ body {
   color: var(--accent);
 }
 
-/* ── LEADERBOARD ── */
+/* LEADERBOARD */
 .leaderboard {
   margin-top: 28px;
   background: var(--surface2);
@@ -270,7 +270,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* ── QUIZ HEADER ── */
+/* QUIZ HEADER */
 .quiz-header {
   display: flex;
   justify-content: space-between;
@@ -295,7 +295,7 @@ body {
   color: var(--accent2);
 }
 
-/* ── TIMER ── */
+/* TIMER */
 .timer-wrap {
   display: flex;
   justify-content: center;
@@ -353,7 +353,7 @@ body {
   50% { transform: scale(1.15); }
 }
 
-/* ── QUESTION ── */
+/* QUESTION */
 .q-category {
   font-family: var(--font-head);
   font-size: 0.6rem;
@@ -371,7 +371,7 @@ body {
   color: var(--text);
 }
 
-/* ── ANSWER BUTTONS ── */
+/* ANSWER BUTTONS */
 .answers-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -441,7 +441,7 @@ body {
   color: #fff;
 }
 
-/* ── FLASH / SHAKE ── */
+/* FLASH / SHAKE */
 .feedback-overlay {
   position: fixed;
   inset: 0;
@@ -470,7 +470,7 @@ body {
   100% { transform: none; background: #00000000; }
 }
 
-/* ── STATUS BADGE ── */
+/* STATUS BADGE */
 .status-badge {
   display: flex;
   align-items: center;
@@ -609,7 +609,7 @@ body {
   margin-bottom: 20px;
 }
 
-/* ── ERROR ── */
+/* ERROR */
 .error-msg {
   background: var(--wrong-bg);
   border: 1px solid var(--wrong);
@@ -620,7 +620,7 @@ body {
   margin-top: 12px;
 }
 
-/* ── NAME OVERLAY ── */
+/* NAME OVERLAY */
 .overlay-bg {
   position: fixed;
   inset: 0;
