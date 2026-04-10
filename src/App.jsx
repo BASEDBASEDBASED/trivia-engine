@@ -9,36 +9,40 @@ import { shuffle, loadLeaderboard, saveLeaderboard, TIMER_MAX } from "./utils/he
 import { createAudioCtx, playCorrect, playWrong, playTick } from "./utils/audio";
 
 export default function App() {
-  const [gameState, setGameState]       = useState("START_SCREEN");
-  const [categories, setCategories]     = useState([]);
-  const [selCategory, setSelCategory]   = useState("");
-  const [selDifficulty, setSelDifficulty] = useState("medium");
-  const [questions, setQuestions]       = useState([]);
-  const [qIndex, setQIndex]             = useState(0);
+  const [gameState, setGameState]             = useState("START_SCREEN");
+  const [categories, setCategories]           = useState([]);
+  const [selCategory, setSelCategory]         = useState("");
+  const [selDifficulty, setSelDifficulty]     = useState("medium");
+  const [questions, setQuestions]             = useState([]);
+  const [qIndex, setQIndex]                   = useState(0);
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
-  const [score, setScore]               = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
-  const [wrongCount, setWrongCount]     = useState(0);
-  const [timeLeft, setTimeLeft]         = useState(TIMER_MAX);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [answerStatus, setAnswerStatus] = useState(null);
-  const [flashClass, setFlashClass]     = useState("");
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState("");
-  const [leaderboard, setLeaderboard]   = useState(loadLeaderboard);
-  const [playerName, setPlayerName]     = useState("");
-  const [namePrompt, setNamePrompt]     = useState(false);
-  const [pendingScore, setPendingScore] = useState(null);
-  const [timeBonus, setTimeBonus]       = useState(0);
+  const [score, setScore]                     = useState(0);
+  const [correctCount, setCorrectCount]       = useState(0);
+  const [wrongCount, setWrongCount]           = useState(0);
+  const [timeLeft, setTimeLeft]               = useState(TIMER_MAX);
+  const [selectedAnswer, setSelectedAnswer]   = useState(null);
+  const [answerStatus, setAnswerStatus]       = useState(null);
+  const [flashClass, setFlashClass]           = useState("");
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState("");
+  const [leaderboard, setLeaderboard]         = useState(loadLeaderboard);
+  const [playerName, setPlayerName]           = useState("");
+  const [namePrompt, setNamePrompt]           = useState(false);
+  const [pendingScore, setPendingScore]       = useState(null);
+  const [timeBonus, setTimeBonus]             = useState(0);
 
-  const audioCtxRef   = useRef(null);
-  const timerRef      = useRef(null);
-  const transitionRef = useRef(false);
+  // Refs don't trigger re-renders — used for audio, timer coordination, and stale closure fixes
+  const audioCtxRef       = useRef(null);
+  const timerRef          = useRef(null);
+  const transitionRef     = useRef(false);   // prevents double-advancing on rapid events
+  const questionsLengthRef = useRef(0);      // always-current questions.length, avoids stale closure in handleTimeout
 
+  // Lazy audio init — must be triggered by a user gesture
   const ensureAudio = () => {
     if (!audioCtxRef.current) audioCtxRef.current = createAudioCtx();
   };
 
+  // Fetch category list from Open Trivia DB on first render
   useEffect(() => {
     fetch("https://opentdb.com/api_category.php")
       .then(r => r.json())
@@ -46,6 +50,12 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Keep questionsLengthRef in sync whenever questions array changes
+  useEffect(() => {
+    questionsLengthRef.current = questions.length;
+  }, [questions]);
+
+  // Reshuffle answers whenever the question index changes (Fisher-Yates via helpers.js)
   useEffect(() => {
     if (questions.length > 0 && qIndex < questions.length) {
       const q = questions[qIndex];
@@ -53,18 +63,22 @@ export default function App() {
     }
   }, [questions, qIndex]);
 
+  // Countdown timer — decrements every second while quiz is active
   useEffect(() => {
     if (gameState !== "QUIZ_ACTIVE" || selectedAnswer !== null) return;
     if (timeLeft <= 0) { handleTimeout(); return; }
+
     timerRef.current = setTimeout(() => {
       setTimeLeft(t => {
-        if (t <= 4) playTick(audioCtxRef.current);
+        if (t <= 4) playTick(audioCtxRef.current); // urgent ticking sound
         return t - 1;
       });
     }, 1000);
+
     return () => clearTimeout(timerRef.current);
   }, [timeLeft, gameState, selectedAnswer]);
 
+  // Called when the timer hits 0
   const handleTimeout = useCallback(() => {
     if (transitionRef.current) return;
     transitionRef.current = true;
@@ -77,11 +91,13 @@ export default function App() {
     setTimeout(() => { setFlashClass(""); advanceQuestion(); }, 1500);
   }, []);
 
+  // Move to the next question or end the quiz
+  // Uses questionsLengthRef instead of questions.length to avoid stale closure bug
   const advanceQuestion = () => {
     transitionRef.current = false;
     setQIndex(i => {
       const next = i + 1;
-      if (next >= questions.length) {
+      if (next >= questionsLengthRef.current) {
         setTimeout(() => setGameState("RESULTS_SCREEN"), 50);
         return i;
       }
@@ -92,15 +108,19 @@ export default function App() {
     });
   };
 
+  // User clicks an answer button
   const handleAnswer = (answer) => {
     if (selectedAnswer !== null || transitionRef.current) return;
     transitionRef.current = true;
     ensureAudio();
     clearTimeout(timerRef.current);
+
     const correct = questions[qIndex].correct_answer;
     const isRight = answer === correct;
     const bonus   = isRight ? timeLeft * 10 : 0;
+
     setSelectedAnswer(answer);
+
     if (isRight) {
       setAnswerStatus("correct");
       setFlashClass("flash-correct");
@@ -114,9 +134,11 @@ export default function App() {
       setWrongCount(c => c + 1);
       playWrong(audioCtxRef.current);
     }
+
     setTimeout(() => { setFlashClass(""); advanceQuestion(); }, 1500);
   };
 
+  // Fetch questions from Open Trivia DB and reset all session state
   const startQuiz = async () => {
     ensureAudio();
     setLoading(true);
@@ -126,11 +148,13 @@ export default function App() {
       if (selCategory) url += `&category=${selCategory}`;
       const res  = await fetch(url);
       const data = await res.json();
+
       if (data.response_code !== 0 || !data.results?.length) {
         setError("Not enough questions for this combo. Try another category/difficulty.");
         setLoading(false);
         return;
       }
+
       setQuestions(data.results);
       setQIndex(0);
       setScore(0);
@@ -148,6 +172,7 @@ export default function App() {
     setLoading(false);
   };
 
+  // Save a high score to localStorage and update leaderboard state
   const submitScore = () => {
     const name = playerName.trim() || "Player";
     const lb = loadLeaderboard();
@@ -162,6 +187,7 @@ export default function App() {
     setGameState("START_SCREEN");
   };
 
+  // Check if score qualifies for leaderboard before navigating away from results
   const handlePlayAgain = () => {
     const lb = loadLeaderboard();
     if (lb.length < 5 || score > lb[lb.length - 1]?.score) {
@@ -174,8 +200,10 @@ export default function App() {
 
   return (
     <>
+      {/* Full-screen flash/shake overlay — driven by flashClass state */}
       <div className={`feedback-overlay ${flashClass}`} />
 
+      {/* Name prompt overlay — shown on top of results screen when a high score is achieved */}
       {namePrompt && (
         <NamePrompt
           pendingScore={pendingScore}
@@ -187,6 +215,9 @@ export default function App() {
       )}
 
       <div className="engine-wrap">
+
+        {/* Conditional rendering — only one screen shown at a time based on gameState */}
+
         {gameState === "START_SCREEN" && (
           <StartScreen
             categories={categories}
@@ -200,6 +231,7 @@ export default function App() {
             onStart={startQuiz}
           />
         )}
+
         {gameState === "QUIZ_ACTIVE" && (
           <QuizScreen
             question={questions[qIndex]}
@@ -213,6 +245,7 @@ export default function App() {
             onAnswer={handleAnswer}
           />
         )}
+
         {gameState === "RESULTS_SCREEN" && (
           <ResultsScreen
             score={score}
@@ -224,6 +257,7 @@ export default function App() {
             onMenu={handlePlayAgain}
           />
         )}
+
       </div>
     </>
   );
