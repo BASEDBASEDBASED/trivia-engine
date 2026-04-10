@@ -76,7 +76,7 @@ body {
 .logo-icon {
   width: 52px;
   height: 52px;
-  background: #0057ff;
+  background: #00e5ff;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -153,7 +153,7 @@ body {
 .btn-primary {
   width: 100%;
   padding: 16px;
-  background: #0057ff;
+  background: #00e5ff;
   border: none;
   border-radius: 10px;
   color: #fff;
