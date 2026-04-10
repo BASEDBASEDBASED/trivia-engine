@@ -17,7 +17,7 @@ export default function StartScreen({
 
         {/* Logo */}
         <div className="logo-row">
-          <div className="logo-icon">⚡</div>
+          <div className="logo-icon">❓</div>
           <div className="logo-text">
             <h1>Grand Master</h1>
             <span>Trivia Engine</span>
