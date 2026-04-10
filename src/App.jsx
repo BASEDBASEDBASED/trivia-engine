@@ -221,7 +221,7 @@ export default function App() {
             timeBonus={timeBonus}
             totalQuestions={questions.length}
             onPlayAgain={handlePlayAgain}
-            onMenu={() => setGameState("START_SCREEN")}
+            onMenu={handlePlayAgain}
           />
         )}
       </div>
