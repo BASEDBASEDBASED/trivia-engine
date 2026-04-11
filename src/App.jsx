@@ -6,7 +6,16 @@ import ResultsScreen from "./screens/ResultsScreen";
 import NamePrompt from "./components/NamePrompt";
 
 import { shuffle, loadLeaderboard, saveLeaderboard, TIMER_MAX } from "./utils/helpers";
-import { createAudioCtx, playCorrect, playWrong, playTick } from "./utils/audio";
+import {
+  createAudioCtx,
+  playCorrect,
+  playWrong,
+  playTick,
+  playClick,
+  playQuizStart,
+  playVictory,
+  startBgMusic,
+} from "./utils/audio";
 
 export default function App() {
   const [gameState, setGameState]             = useState("START_SCREEN");
@@ -32,15 +41,44 @@ export default function App() {
   const [timeBonus, setTimeBonus]             = useState(0);
 
   // Refs don't trigger re-renders — used for audio, timer coordination, and stale closure fixes
-  const audioCtxRef       = useRef(null);
-  const timerRef          = useRef(null);
-  const transitionRef     = useRef(false);   // prevents double-advancing on rapid events
-  const questionsLengthRef = useRef(0);      // always-current questions.length, avoids stale closure in handleTimeout
+  const audioCtxRef        = useRef(null);
+  const timerRef           = useRef(null);
+  const transitionRef      = useRef(false);
+  const questionsLengthRef = useRef(0);   // avoids stale closure in handleTimeout
+  const bgMusicRef         = useRef(null); // holds the current background music { stop() }
 
   // Lazy audio init — must be triggered by a user gesture
   const ensureAudio = () => {
     if (!audioCtxRef.current) audioCtxRef.current = createAudioCtx();
   };
+
+  // Start background music, stopping any currently playing track first
+  const startMusic = () => {
+    if (bgMusicRef.current) {
+      bgMusicRef.current.stop();
+      bgMusicRef.current = null;
+    }
+    bgMusicRef.current = startBgMusic(audioCtxRef.current);
+  };
+
+  // Stop background music with a fade
+  const stopMusic = () => {
+    if (bgMusicRef.current) {
+      bgMusicRef.current.stop();
+      bgMusicRef.current = null;
+    }
+  };
+
+  // Play background music on start screen and results screen
+  useEffect(() => {
+    if (!audioCtxRef.current) return; // don't autoplay before first user interaction
+    if (gameState === "START_SCREEN" || gameState === "RESULTS_SCREEN") {
+      startMusic();
+    } else {
+      stopMusic();
+    }
+    return () => stopMusic();
+  }, [gameState]);
 
   // Fetch category list from Open Trivia DB on first render
   useEffect(() => {
@@ -70,7 +108,7 @@ export default function App() {
 
     timerRef.current = setTimeout(() => {
       setTimeLeft(t => {
-        if (t <= 4) playTick(audioCtxRef.current); // urgent ticking sound
+        if (t <= 4) playTick(audioCtxRef.current);
         return t - 1;
       });
     }, 1000);
@@ -141,6 +179,7 @@ export default function App() {
   // Fetch questions from Open Trivia DB and reset all session state
   const startQuiz = async () => {
     ensureAudio();
+    playClick(audioCtxRef.current);
     setLoading(true);
     setError("");
     try {
@@ -154,6 +193,9 @@ export default function App() {
         setLoading(false);
         return;
       }
+
+      stopMusic();
+      playQuizStart(audioCtxRef.current);
 
       setQuestions(data.results);
       setQIndex(0);
@@ -174,6 +216,7 @@ export default function App() {
 
   // Save a high score to localStorage and update leaderboard state
   const submitScore = () => {
+    playClick(audioCtxRef.current);
     const name = playerName.trim() || "Player";
     const lb = loadLeaderboard();
     lb.push({ name, score: pendingScore });
@@ -189,6 +232,7 @@ export default function App() {
 
   // Check if score qualifies for leaderboard before navigating away from results
   const handlePlayAgain = () => {
+    playClick(audioCtxRef.current);
     const lb = loadLeaderboard();
     if (lb.length < 5 || score > lb[lb.length - 1]?.score) {
       setPendingScore(score);
@@ -197,6 +241,13 @@ export default function App() {
       setGameState("START_SCREEN");
     }
   };
+
+  // Play victory sound when results screen first appears
+  useEffect(() => {
+    if (gameState === "RESULTS_SCREEN" && audioCtxRef.current) {
+      setTimeout(() => playVictory(audioCtxRef.current), 300);
+    }
+  }, [gameState]);
 
   return (
     <>
@@ -210,13 +261,11 @@ export default function App() {
           playerName={playerName}
           onNameChange={setPlayerName}
           onSubmit={submitScore}
-          onSkip={() => { setNamePrompt(false); setGameState("START_SCREEN"); }}
+          onSkip={() => { playClick(audioCtxRef.current); setNamePrompt(false); setGameState("START_SCREEN"); }}
         />
       )}
 
       <div className="engine-wrap">
-
-        {/* Conditional rendering — only one screen shown at a time based on gameState */}
 
         {gameState === "START_SCREEN" && (
           <StartScreen
@@ -226,8 +275,8 @@ export default function App() {
             loading={loading}
             error={error}
             leaderboard={leaderboard}
-            onCategoryChange={setSelCategory}
-            onDifficultyChange={setSelDifficulty}
+            onCategoryChange={(v) => { playClick(audioCtxRef.current); setSelCategory(v); }}
+            onDifficultyChange={(v) => { playClick(audioCtxRef.current); setSelDifficulty(v); }}
             onStart={startQuiz}
           />
         )}
