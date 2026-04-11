@@ -1,7 +1,7 @@
-1. Technical Report & User Manual (18 pts) 
-1.1 Project Overview (3 pts) 
-The Grand Master Trivia Engine is an exciting, time pressured quiz app that is built with React. The layout uses CSS flexbox and grid and mobile breakpoint at 500px that switches the two column answer grid into a single column. It gets different multiple choice questions across different difficulties and categories fetched from the Open Trivia DB API. Each quiz is 10 questions, with each question giving the user 15 seconds to answer correctly. The app solves the problem of low engagement, boring quizzes by adding time pressure, bonuses for fast answers, sound feedback, and a highscore leaderboard to make it competitive. Additionally, this app is a cure for boredom!
-1.2 Component Architecture (5 pts) 
+1. Technical Report & User Manual 
+1.1 Project Overview 
+The Grand Master Trivia Engine is an exciting, time pressured quiz app that is built with React. The layout uses CSS flexbox and grid, and mobile breakpoint at 500px that switches the two column answer grid into a single column. It gets different multiple choice questions across different difficulties and categories fetched from the Open Trivia DB API. Each quiz is 10 questions, with each question giving the user 15 seconds to answer correctly. The app solves the problem of low engagement, boring quizzes by adding time pressure, bonuses for fast answers, sound feedback, and a highscore leaderboard to make it competitive. Additionally, this app is a cure for boredom!
+1.2 Component Architecture 
 List your components and explain how data flows between them. Use the following format: 
 App.jsx - This holds all global state like gameState, questions, score, timeLeft, and the session counters. Contains all handler functions (startQuiz,  submitScore, …) and passes data and callbacks as props. Manages three useEffect hooks (fetch categories on mount, reshuffle when question index changes, run  timer). Timer useEffect returns a clean up function () => clearTimeoutRef.current to prevent timer from running after state changes. 
 StartScreen.jsx - Receives categories, selCategory, selDifficulty, loading, leaderboard as props from App.jsx. Renders the category and difficulty dropdowns and start button. User selections are then lifted back up to App.jsx  through onCategoryChange and onDifficulty callbacks. 
@@ -14,7 +14,7 @@ NamePrompt.jsx - Receives pendingScore, playerName, onSubmit, and onSkip as prop
 These below aren't components but I figured to add them here:
 Utils/helpers.js  - Exports functions localStorage access and the timer_max constant.
 Audio.js - Exports playCorrect, playWrong(), and playTick() using web Audio API. The audio context is stored in a useRef in App so it persists across renders without triggering re-renders.
-1.3 Detailed Functionality (5 pts) 
+1.3 Detailed Functionality 
 For each "Sophisticated" requirement, explain how you implemented it: 
 
 Feature 1: 15 second Timer: The timer is in a useEffect that depends on [timeLeft, gamestate, selectedAwnser]. When timeLeft changes, the effect sets a 1 second setTimeout that decrements timeLeft by 1. This only runs when the gameState is “quiz_active” and the selectedAwnser is null. When timeLeft hits 0, handleTimeout() is used and sets the selectedAnswer as wrong and plays the sound and calls advanceQuestion(). advanceQuestion(0 resets the timeLeft back to the timer max and triggers useEffect for the next question.
@@ -23,7 +23,7 @@ Feature 2: External API: The app makes 2 API calls to opentdb.com. On mount, use
 
 Feature 3: LocalStorage Persistence: The leaderboard is stored in localStorage under gm)trivia_leaderboard as a JSON string. loadLeaderboard() is called when App initializes its leaderboard state. When the session ends, ResultsScreen checks if the score would land in the top 5 highest. If the score is in the top 5 highest, the NamePrompt overlay will appear. When a user submits a name, sibmitScore() reads the current leaderboard, pushes the new score, sorts the score by descending, cuts it to top 5, and calls saveLeaderboard() to write it back to local Storage. 
 
-1.4 User Manual (How to Navigate) (5 pts) 
+1.4 User Manual (How to Navigate) 
 • Step 1: Go to the link  
 • Step 2:  Choose your category (if any in specific) and choose desired difficulty
 • Step 3: Click Start Quiz
@@ -34,6 +34,6 @@ Feature 3: LocalStorage Persistence: The leaderboard is stored in localStorage u
 • Step 8: Have fun!
 
 
-2. Technical Challenges & Solutions (5 pts) 
+2. Technical Challenges & Solutions 
 The biggest challenge was getting the timer to work correctly with React's state system. I was originally using setInterval with a direct reference to timeLeft inside the callback, but because of how js closures work, the callback would get the initial value of timeLeft and would never see it update, the timer would end up getting stuck and not working as it should be. The fix was switching to a chained setTimeout in a useEffect that reruns every time timeLeft changes, using setTimeLeft(t => t-1) reads the latest state value.
 The second big challenge came from the same root cause. handleTimeout was defined using useCallback with an empty dependency array, meaning it captured questions.length from the first render when the array is still empty. When the timer would get to 0, the app thought that the quiz had ended and would skip all remaining questions left and would go to the results page instead of the next question (if any). The fix was storing questions.length in a ref with a useEffect to keep it in sync. Refs being mutable makes it always return the current value, so advanceQuestion can read the ref and always get the correct length.  
