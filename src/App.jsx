@@ -47,12 +47,12 @@ export default function App() {
   const questionsLengthRef = useRef(0);   // avoids stale closure in handleTimeout
   const bgMusicRef         = useRef(null); // holds the current background music { stop() }
 
-  // must be triggered by a user gesture
+  // Lazy audio init — must be triggered by a user gesture
   const ensureAudio = () => {
     if (!audioCtxRef.current) audioCtxRef.current = createAudioCtx();
   };
 
-  // start background music, stopping any currently playing track first
+  // Start background music, stopping any currently playing track first
   const startMusic = () => {
     if (bgMusicRef.current) {
       bgMusicRef.current.stop();
@@ -61,7 +61,7 @@ export default function App() {
     bgMusicRef.current = startBgMusic(audioCtxRef.current);
   };
 
-  // background music with a fade
+  // Stop background music with a fade
   const stopMusic = () => {
     if (bgMusicRef.current) {
       bgMusicRef.current.stop();
@@ -69,7 +69,7 @@ export default function App() {
     }
   };
 
-  // play background music on start screen and results screen
+  // Play background music on start screen and results screen
   useEffect(() => {
     if (!audioCtxRef.current) return; // don't autoplay before first user interaction
     if (gameState === "START_SCREEN" || gameState === "RESULTS_SCREEN") {
@@ -88,10 +88,12 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Keep questionsLengthRef in sync whenever questions array changes
   useEffect(() => {
     questionsLengthRef.current = questions.length;
   }, [questions]);
 
+  // Reshuffle answers whenever the question index changes (Fisher-Yates via helpers.js)
   useEffect(() => {
     if (questions.length > 0 && qIndex < questions.length) {
       const q = questions[qIndex];
@@ -99,7 +101,7 @@ export default function App() {
     }
   }, [questions, qIndex]);
 
-  // Countdown timer decrements every second while quiz is active
+  // Countdown timer — decrements every second while quiz is active
   useEffect(() => {
     if (gameState !== "QUIZ_ACTIVE" || selectedAnswer !== null) return;
     if (timeLeft <= 0) { handleTimeout(); return; }
@@ -114,7 +116,7 @@ export default function App() {
     return () => clearTimeout(timerRef.current);
   }, [timeLeft, gameState, selectedAnswer]);
 
-  // called when the timer hits 0
+  // Called when the timer hits 0
   const handleTimeout = useCallback(() => {
     if (transitionRef.current) return;
     transitionRef.current = true;
@@ -144,7 +146,7 @@ export default function App() {
     });
   };
 
-  // user clicks an answer button
+  // User clicks an answer button
   const handleAnswer = (answer) => {
     if (selectedAnswer !== null || transitionRef.current) return;
     transitionRef.current = true;
@@ -174,7 +176,7 @@ export default function App() {
     setTimeout(() => { setFlashClass(""); advanceQuestion(); }, 1500);
   };
 
-  // fetch questions from Open Trivia DB and reset all session state
+  // Fetch questions from Open Trivia DB and reset all session state
   const startQuiz = async () => {
     ensureAudio();
     playClick(audioCtxRef.current);
@@ -228,7 +230,7 @@ export default function App() {
     setGameState("START_SCREEN");
   };
 
-  // check if score qualifies for leaderboard before navigating away from results
+  // Check if score qualifies for leaderboard before navigating away from results
   const handlePlayAgain = () => {
     playClick(audioCtxRef.current);
     const lb = loadLeaderboard();
@@ -240,7 +242,7 @@ export default function App() {
     }
   };
 
-  // play victory sound when results screen first appears
+  // Play victory sound when results screen first appears
   useEffect(() => {
     if (gameState === "RESULTS_SCREEN" && audioCtxRef.current) {
       setTimeout(() => playVictory(audioCtxRef.current), 300);
